@@ -65,6 +65,7 @@ claudecode-discord/
 │   │   │   ├── stop.ts
 │   │   │   ├── auto-approve.ts
 │   │   │   ├── sessions.ts
+│   │   │   ├── last.ts
 │   │   │   └── clear-sessions.ts
 │   │   └── handlers/       # 이벤트 핸들러
 │   │       ├── message.ts
@@ -94,6 +95,7 @@ claudecode-discord/
 | `/stop` | 현재 채널 세션 중지 | |
 | `/auto-approve on\|off` | 자동 승인 토글 | `/auto-approve on` |
 | `/sessions` | 기존 세션 목록 조회, 재개 또는 삭제 | |
+| `/last` | 현재 세션의 마지막 Claude 응답 전체 확인 | |
 | `/clear-sessions` | 해당 프로젝트의 모든 세션 일괄 삭제 | |
 
 `/register`의 경로는 `.env`에 설정한 `BASE_PROJECT_DIR` 기준으로 해석됩니다.

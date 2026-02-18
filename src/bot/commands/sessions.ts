@@ -102,6 +102,45 @@ export async function getLastAssistantMessage(filePath: string): Promise<string>
 }
 
 /**
+ * Read the full last assistant text message from a JSONL session file.
+ */
+export async function getLastAssistantMessageFull(filePath: string): Promise<string> {
+  const stream = fs.createReadStream(filePath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+  let lastText = "";
+
+  for await (const line of rl) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.type === "assistant" && entry.message?.content) {
+        const content = entry.message.content;
+        let raw = "";
+        if (Array.isArray(content)) {
+          for (const block of content) {
+            if (block.type === "text" && block.text) {
+              raw += block.text;
+            }
+          }
+        } else if (typeof content === "string") {
+          raw = content;
+        }
+        if (raw.trim()) {
+          lastText = raw.trim();
+        }
+      }
+    } catch {
+      // skip
+    }
+  }
+
+  rl.close();
+  stream.destroy();
+
+  return lastText || "(no message)";
+}
+
+/**
  * Read the first user message from a JSONL session file.
  */
 async function getFirstUserMessage(filePath: string): Promise<{ text: string; timestamp: string }> {

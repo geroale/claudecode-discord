@@ -67,6 +67,7 @@ claudecode-discord/
 │   │   │   ├── stop.ts
 │   │   │   ├── auto-approve.ts
 │   │   │   ├── sessions.ts
+│   │   │   ├── last.ts
 │   │   │   └── clear-sessions.ts
 │   │   └── handlers/       # Event handlers
 │   │       ├── message.ts
@@ -96,6 +97,7 @@ claudecode-discord/
 | `/stop` | Stop current channel's session | |
 | `/auto-approve on\|off` | Toggle auto-approval | `/auto-approve on` |
 | `/sessions` | List sessions to resume or delete | |
+| `/last` | Show the last Claude response from current session | |
 | `/clear-sessions` | Delete all session files for the project | |
 
 The `/register` path is resolved relative to the `BASE_PROJECT_DIR` set in your `.env` file.
