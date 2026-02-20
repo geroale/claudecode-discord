@@ -107,7 +107,11 @@ export async function handleMessage(message: Message): Promise<void> {
   // If session is active, offer to queue the message
   if (sessionManager.isActive(message.channelId)) {
     if (sessionManager.hasQueue(message.channelId)) {
-      await message.reply("⏳ 이미 대기 중인 메시지가 있습니다. 현재 작업 완료를 기다려주세요.");
+      await message.reply("⏳ 이미 큐 추가 대기 중인 메시지가 있습니다. 버튼을 먼저 눌러주세요.");
+      return;
+    }
+    if (sessionManager.isQueueFull(message.channelId)) {
+      await message.reply(`⏳ 큐가 가득 찼습니다 (최대 5개). 현재 작업 완료를 기다려주세요.`);
       return;
     }
 

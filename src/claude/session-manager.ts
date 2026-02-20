@@ -48,7 +48,8 @@ const pendingCustomInputs = new Map<string, { requestId: string }>();
 
 class SessionManager {
   private sessions = new Map<string, ActiveSession>();
-  private messageQueue = new Map<string, { channel: TextChannel; prompt: string }>();
+  private static readonly MAX_QUEUE_SIZE = 5;
+  private messageQueue = new Map<string, { channel: TextChannel; prompt: string }[]>();
   private pendingQueuePrompts = new Map<string, { channel: TextChannel; prompt: string }>();
 
   async sendMessage(
@@ -360,10 +361,15 @@ class SessionManager {
       this.sessions.delete(channelId);
 
       // Process next queued message if any
-      const next = this.messageQueue.get(channelId);
-      if (next) {
-        this.messageQueue.delete(channelId);
-        channel.send("📨 대기 중이던 메시지를 처리합니다...").catch(() => {});
+      const queue = this.messageQueue.get(channelId);
+      if (queue && queue.length > 0) {
+        const next = queue.shift()!;
+        if (queue.length === 0) this.messageQueue.delete(channelId);
+        const remaining = queue.length;
+        const msg = remaining > 0
+          ? `📨 대기 중이던 메시지를 처리합니다... (남은 큐: ${remaining}개)`
+          : "📨 대기 중이던 메시지를 처리합니다...";
+        channel.send(msg).catch(() => {});
         this.sendMessage(next.channel, next.prompt);
       }
     }
@@ -444,7 +450,9 @@ class SessionManager {
     const pending = this.pendingQueuePrompts.get(channelId);
     if (!pending) return false;
     this.pendingQueuePrompts.delete(channelId);
-    this.messageQueue.set(channelId, pending);
+    const queue = this.messageQueue.get(channelId) ?? [];
+    queue.push(pending);
+    this.messageQueue.set(channelId, queue);
     return true;
   }
 
@@ -452,8 +460,17 @@ class SessionManager {
     this.pendingQueuePrompts.delete(channelId);
   }
 
+  isQueueFull(channelId: string): boolean {
+    const queue = this.messageQueue.get(channelId) ?? [];
+    return queue.length >= SessionManager.MAX_QUEUE_SIZE;
+  }
+
+  getQueueSize(channelId: string): number {
+    return (this.messageQueue.get(channelId) ?? []).length;
+  }
+
   hasQueue(channelId: string): boolean {
-    return this.messageQueue.has(channelId) || this.pendingQueuePrompts.has(channelId);
+    return this.pendingQueuePrompts.has(channelId);
   }
 }
 

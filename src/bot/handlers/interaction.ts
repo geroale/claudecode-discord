@@ -65,8 +65,9 @@ export async function handleButtonInteraction(
       });
       return;
     }
+    const queueSize = sessionManager.getQueueSize(channelId);
     await interaction.update({
-      content: "📨 메시지가 큐에 추가되었습니다. 이전 작업 완료 후 자동으로 처리됩니다.",
+      content: `📨 메시지가 큐에 추가되었습니다 (${queueSize}/5). 이전 작업 완료 후 자동으로 처리됩니다.`,
       components: [],
     });
     return;
