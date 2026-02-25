@@ -17,11 +17,11 @@ npx tsc --noEmit      # 타입 체크만 수행 (빌드 출력 없음)
 | 테스트 파일 | 개수 | 대상 모듈 | 전략 |
 |---|---|---|---|
 | `src/claude/output-formatter.test.ts` | 29 | 메시지 분할, 코드 블록 펜스, Discord embed/버튼 생성 | 모킹 없음 — 순수 로직 + discord.js 생성자 네이티브 동작 |
-| `src/security/guard.test.ts` | 13 | 유저 화이트리스트, 슬라이딩 윈도우 레이트 리밋, 경로 순회 차단 | `getConfig()` 모킹, `vi.spyOn(fs)`, `vi.useFakeTimers()` |
+| `src/security/guard.test.ts` | 16 | 유저 화이트리스트, 슬라이딩 윈도우 레이트 리밋, 경로 순회 차단, BASE_PROJECT_DIR 범위 검증 | `getConfig()` 모킹, `vi.spyOn(fs)`, `vi.useFakeTimers()` |
 | `src/utils/config.test.ts` | 8 | Zod 환경변수 검증, 싱글톤 캐싱, 에러 시 `process.exit` | `vi.resetModules()` + 동적 `import()` |
 | `src/db/database.test.ts` | 12 | Project/Session CRUD 연산 | `better-sqlite3` 생성자 모킹으로 인메모리 SQLite 사용 |
 | `src/bot/commands/sessions.test.ts` | 12 | JSONL 세션 파싱, `findSessionDir`, 비정상 JSON 처리 | 실제 임시 파일 (`fs.mkdtempSync`) + `os.homedir()` 모킹 |
-| **합계** | **74** | | |
+| **합계** | **77** | | |
 
 ## 각 테스트 커버리지
 
@@ -34,11 +34,11 @@ npx tsc --noEmit      # 타입 체크만 수행 (빌드 출력 없음)
 - **createAskUserQuestionEmbed**: 단일 선택 (버튼), 다중 선택 (StringSelectMenu), 질문 인덱스, 행 분리 (행당 버튼 5개)
 - **createStopButton / createCompletedButton**: customId 형식, 비활성 상태
 
-### guard (13개)
+### guard (16개)
 
 - **isAllowedUser**: 화이트리스트 매칭, 대소문자 구분, 빈 문자열 거부
 - **checkRateLimit**: 제한 내 요청, 초과 차단, 60초 윈도우 리셋, 유저별 독립 추적
-- **validateProjectPath**: 경로 순회(`..`) 차단 (fs 호출 전 검사), 미존재 경로, 비디렉토리 경로, 유효 디렉토리
+- **validateProjectPath**: 경로 순회(`..`) 차단 (fs 호출 전 검사), BASE_PROJECT_DIR 범위 강제, 미존재 경로, 비디렉토리 경로, 유효 디렉토리
 
 ### config (8개)
 

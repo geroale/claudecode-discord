@@ -17,11 +17,11 @@ npx tsc --noEmit      # Type check only (no build output)
 | Test File | Tests | Target Module | Strategy |
 |---|---|---|---|
 | `src/claude/output-formatter.test.ts` | 29 | Message splitting, code block fence handling, Discord embed/button creation | No mocking — pure logic + discord.js constructors work natively |
-| `src/security/guard.test.ts` | 13 | User whitelist, sliding-window rate limiting, path traversal blocking | Mock `getConfig()`, `vi.spyOn(fs)`, `vi.useFakeTimers()` |
+| `src/security/guard.test.ts` | 16 | User whitelist, sliding-window rate limiting, path traversal blocking, BASE_PROJECT_DIR scope validation | Mock `getConfig()`, `vi.spyOn(fs)`, `vi.useFakeTimers()` |
 | `src/utils/config.test.ts` | 8 | Zod env validation, singleton caching, `process.exit` on error | `vi.resetModules()` + dynamic `import()` per test |
 | `src/db/database.test.ts` | 12 | Project/Session CRUD operations | In-memory SQLite via `better-sqlite3` constructor mock |
 | `src/bot/commands/sessions.test.ts` | 12 | JSONL session parsing, `findSessionDir`, malformed JSON handling | Real temp files (`fs.mkdtempSync`) + `os.homedir()` mock |
-| **Total** | **74** | | |
+| **Total** | **77** | | |
 
 ## What Each Test Covers
 
@@ -34,11 +34,11 @@ npx tsc --noEmit      # Type check only (no build output)
 - **createAskUserQuestionEmbed**: Single-select (buttons), multi-select (StringSelectMenu), question indexing, row splitting (5 buttons per row)
 - **createStopButton / createCompletedButton**: CustomId format, disabled state
 
-### guard (13 tests)
+### guard (16 tests)
 
 - **isAllowedUser**: Whitelist match, case sensitivity, empty string rejection
 - **checkRateLimit**: Within-limit requests, over-limit blocking, 60s window reset, per-user independence
-- **validateProjectPath**: Path traversal (`..`) blocking before fs calls, non-existent path, non-directory path, valid directory
+- **validateProjectPath**: Path traversal (`..`) blocking before fs calls, BASE_PROJECT_DIR scope enforcement, non-existent path, non-directory path, valid directory
 
 ### config (8 tests)
 
