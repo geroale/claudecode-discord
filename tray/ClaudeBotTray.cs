@@ -100,17 +100,17 @@ class ClaudeBotTray : Form
         if (!hasEnv)
         {
             trayIcon.Icon = Icon.FromHandle(CreateIcon(Color.Orange).GetHicon());
-            trayIcon.Text = "Claude Bot: 설정 필요";
+            trayIcon.Text = "Claude Bot: Setup Required";
         }
         else if (running)
         {
             trayIcon.Icon = Icon.FromHandle(CreateIcon(Color.LimeGreen).GetHicon());
-            trayIcon.Text = "Claude Bot: 실행 중";
+            trayIcon.Text = "Claude Bot: Running";
         }
         else
         {
             trayIcon.Icon = Icon.FromHandle(CreateIcon(Color.Red).GetHicon());
-            trayIcon.Text = "Claude Bot: 중지됨";
+            trayIcon.Text = "Claude Bot: Stopped";
         }
     }
 
@@ -123,35 +123,35 @@ class ClaudeBotTray : Form
 
         if (!hasEnv)
         {
-            var noEnv = new ToolStripMenuItem("⚙️ 설정이 필요합니다") { Enabled = false };
+            var noEnv = new ToolStripMenuItem("⚙️ Setup Required") { Enabled = false };
             menu.Items.Add(noEnv);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("초기 설정...", null, OpenSettings);
+            menu.Items.Add("Setup...", null, OpenSettings);
         }
         else
         {
-            var status = new ToolStripMenuItem(running ? "🟢 실행 중" : "🔴 중지됨") { Enabled = false };
+            var status = new ToolStripMenuItem(running ? "🟢 Running" : "🔴 Stopped") { Enabled = false };
             menu.Items.Add(status);
             menu.Items.Add(new ToolStripSeparator());
 
             if (running)
             {
-                menu.Items.Add("봇 중지", null, StopBot);
-                menu.Items.Add("봇 재시작", null, RestartBot);
+                menu.Items.Add("Stop Bot", null, StopBot);
+                menu.Items.Add("Restart Bot", null, RestartBot);
             }
             else
             {
-                menu.Items.Add("봇 시작", null, StartBot);
+                menu.Items.Add("Start Bot", null, StartBot);
             }
 
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("설정 편집...", null, OpenSettings);
-            menu.Items.Add("로그 보기", null, OpenLog);
-            menu.Items.Add("폴더 열기", null, OpenFolder);
+            menu.Items.Add("Settings...", null, OpenSettings);
+            menu.Items.Add("View Log", null, OpenLog);
+            menu.Items.Add("Open Folder", null, OpenFolder);
         }
 
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("종료", null, QuitAll);
+        menu.Items.Add("Quit", null, QuitAll);
 
         trayIcon.ContextMenuStrip = menu;
     }
@@ -200,7 +200,7 @@ class ClaudeBotTray : Form
 
         var form = new Form()
         {
-            Text = "Claude Discord Bot 설정",
+            Text = "Claude Discord Bot Settings",
             Width = 500,
             Height = 400,
             StartPosition = FormStartPosition.CenterScreen,
@@ -212,10 +212,10 @@ class ClaudeBotTray : Form
         string[][] fields = new string[][] {
             new string[] { "DISCORD_BOT_TOKEN", "Discord Bot Token" },
             new string[] { "DISCORD_GUILD_ID", "Discord Guild ID" },
-            new string[] { "ALLOWED_USER_IDS", "허용할 User ID (쉼표 구분)" },
-            new string[] { "BASE_PROJECT_DIR", "프로젝트 기본 디렉토리" },
-            new string[] { "RATE_LIMIT_PER_MINUTE", "분당 요청 제한" },
-            new string[] { "SHOW_COST", "비용 표시 (true/false)" },
+            new string[] { "ALLOWED_USER_IDS", "Allowed User IDs (comma-separated)" },
+            new string[] { "BASE_PROJECT_DIR", "Base Project Directory" },
+            new string[] { "RATE_LIMIT_PER_MINUTE", "Rate Limit Per Minute" },
+            new string[] { "SHOW_COST", "Show Cost (true/false)" },
         };
 
         string[] defaults = new string[] { "", "", "", botDir, "10", "true" };
@@ -235,7 +235,7 @@ class ClaudeBotTray : Form
 
             if (fields[i][0] == "DISCORD_BOT_TOKEN" && val != null && val.Length > 10)
             {
-                tb.PlaceholderText = "••••" + val.Substring(val.Length - 6) + " (변경 시 전체 입력)";
+                tb.PlaceholderText = "••••" + val.Substring(val.Length - 6) + " (enter full token to change)";
             }
             else
             {
@@ -247,12 +247,12 @@ class ClaudeBotTray : Form
             y += 30;
         }
 
-        var note = new Label() { Text = "* Max 플랜 사용자는 비용 표시를 false로 설정하세요", Left = 15, Top = y, Width = 450, ForeColor = Color.Gray };
+        var note = new Label() { Text = "* Max plan users should set Show Cost to false", Left = 15, Top = y, Width = 450, ForeColor = Color.Gray };
         form.Controls.Add(note);
         y += 25;
 
-        var saveBtn = new Button() { Text = "저장", Left = 300, Top = y, Width = 80 };
-        var cancelBtn = new Button() { Text = "취소", Left = 385, Top = y, Width = 80 };
+        var saveBtn = new Button() { Text = "Save", Left = 300, Top = y, Width = 80 };
+        var cancelBtn = new Button() { Text = "Cancel", Left = 385, Top = y, Width = 80 };
 
         saveBtn.Click += (s, ev) =>
         {
@@ -271,7 +271,7 @@ class ClaudeBotTray : Form
 
             if (values[0] == "" || values[1] == "" || values[2] == "")
             {
-                MessageBox.Show("Bot Token, Guild ID, User ID는 필수입니다.", "필수 항목 누락", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Bot Token, Guild ID, and User IDs are required.", "Required Fields Missing", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 

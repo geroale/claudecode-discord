@@ -11,7 +11,7 @@ try:
     import pystray
     from PIL import Image, ImageDraw
 except ImportError:
-    print("필요한 패키지를 설치합니다: pip3 install pystray Pillow")
+    print("Installing required packages: pip3 install pystray Pillow")
     subprocess.run([sys.executable, "-m", "pip", "install", "pystray", "Pillow"], check=True)
     import pystray
     from PIL import Image, ImageDraw
@@ -86,20 +86,20 @@ def _edit_settings_zenity():
     fields = [
         ("DISCORD_BOT_TOKEN", "Discord Bot Token"),
         ("DISCORD_GUILD_ID", "Discord Guild ID"),
-        ("ALLOWED_USER_IDS", "허용할 User ID (쉼표 구분)"),
-        ("BASE_PROJECT_DIR", "프로젝트 기본 디렉토리"),
-        ("RATE_LIMIT_PER_MINUTE", "분당 요청 제한"),
-        ("SHOW_COST", "비용 표시 (true/false)"),
+        ("ALLOWED_USER_IDS", "Allowed User IDs (comma-separated)"),
+        ("BASE_PROJECT_DIR", "Base Project Directory"),
+        ("RATE_LIMIT_PER_MINUTE", "Rate Limit Per Minute"),
+        ("SHOW_COST", "Show Cost (true/false)"),
     ]
 
-    form_args = ["zenity", "--forms", "--title=Claude Discord Bot 설정",
-                  "--text=필수 항목을 입력해주세요.\n현재 값을 유지하려면 빈칸으로 두세요."]
+    form_args = ["zenity", "--forms", "--title=Claude Discord Bot Settings",
+                  "--text=Please fill in the required fields.\nLeave blank to keep current value."]
     for key, label in fields:
         current = env.get(key, "")
         if key == "DISCORD_BOT_TOKEN" and len(current) > 10:
-            display = f"(설정됨: ••••{current[-6:]})"
+            display = f"(set: ••••{current[-6:]})"
         elif current:
-            display = f"(현재: {current})"
+            display = f"(current: {current})"
         else:
             display = ""
         form_args.append(f"--add-entry={label} {display}")
@@ -126,7 +126,7 @@ def _edit_settings_zenity():
             new_env[key] = default
 
     if not new_env.get("DISCORD_BOT_TOKEN") or not new_env.get("DISCORD_GUILD_ID") or not new_env.get("ALLOWED_USER_IDS"):
-        subprocess.run(["zenity", "--error", "--text=Bot Token, Guild ID, User ID는 필수입니다."])
+        subprocess.run(["zenity", "--error", "--text=Bot Token, Guild ID, and User IDs are required."])
         return
 
     with open(ENV_PATH, "w") as f:
@@ -160,7 +160,7 @@ def update_icon(icon):
     running = is_running()
     color = (76, 175, 80, 255) if running else (244, 67, 54, 255)  # green / red
     icon.icon = create_icon(color)
-    icon.title = "Claude Bot: 실행 중" if running else "Claude Bot: 중지됨"
+    icon.title = "Claude Bot: Running" if running else "Claude Bot: Stopped"
 
 
 def create_menu():
@@ -169,37 +169,37 @@ def create_menu():
 
     if not has_env:
         return pystray.Menu(
-            pystray.MenuItem("⚙️ 설정이 필요합니다", None, enabled=False),
+            pystray.MenuItem("⚙️ Setup Required", None, enabled=False),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("초기 설정...", edit_settings),
+            pystray.MenuItem("Setup...", edit_settings),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("종료", quit_all),
+            pystray.MenuItem("Quit", quit_all),
         )
 
     if running:
         return pystray.Menu(
-            pystray.MenuItem("🟢 실행 중", None, enabled=False),
+            pystray.MenuItem("🟢 Running", None, enabled=False),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("봇 중지", stop_bot),
-            pystray.MenuItem("봇 재시작", restart_bot),
+            pystray.MenuItem("Stop Bot", stop_bot),
+            pystray.MenuItem("Restart Bot", restart_bot),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("설정 편집...", edit_settings),
-            pystray.MenuItem("로그 보기", open_log),
-            pystray.MenuItem("폴더 열기", open_folder),
+            pystray.MenuItem("Settings...", edit_settings),
+            pystray.MenuItem("View Log", open_log),
+            pystray.MenuItem("Open Folder", open_folder),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("종료", quit_all),
+            pystray.MenuItem("Quit", quit_all),
         )
     else:
         return pystray.Menu(
-            pystray.MenuItem("🔴 중지됨", None, enabled=False),
+            pystray.MenuItem("🔴 Stopped", None, enabled=False),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("봇 시작", start_bot),
+            pystray.MenuItem("Start Bot", start_bot),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("설정 편집...", edit_settings),
-            pystray.MenuItem("로그 보기", open_log),
-            pystray.MenuItem("폴더 열기", open_folder),
+            pystray.MenuItem("Settings...", edit_settings),
+            pystray.MenuItem("View Log", open_log),
+            pystray.MenuItem("Open Folder", open_folder),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("종료", quit_all),
+            pystray.MenuItem("Quit", quit_all),
         )
 
 

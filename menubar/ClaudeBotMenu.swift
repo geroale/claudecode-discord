@@ -51,10 +51,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             if !hasEnv {
                 self.statusItem.button?.title = " ⚙️"
-                self.statusItem.button?.toolTip = "Claude Bot: 설정 필요"
+                self.statusItem.button?.toolTip = "Claude Bot: Setup Required"
             } else {
                 self.statusItem.button?.title = running ? " 🟢" : " 🔴"
-                self.statusItem.button?.toolTip = running ? "Claude Bot: 실행 중" : "Claude Bot: 중지됨"
+                self.statusItem.button?.toolTip = running ? "Claude Bot: Running" : "Claude Bot: Stopped"
             }
         }
     }
@@ -65,52 +65,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hasEnv = FileManager.default.fileExists(atPath: envPath)
 
         if !hasEnv {
-            let noEnvItem = NSMenuItem(title: "⚙️ 설정이 필요합니다", action: nil, keyEquivalent: "")
+            let noEnvItem = NSMenuItem(title: "⚙️ Setup Required", action: nil, keyEquivalent: "")
             noEnvItem.isEnabled = false
             menu.addItem(noEnvItem)
             menu.addItem(NSMenuItem.separator())
 
-            let setupItem = NSMenuItem(title: "초기 설정...", action: #selector(openSettings), keyEquivalent: "e")
+            let setupItem = NSMenuItem(title: "Setup...", action: #selector(openSettings), keyEquivalent: "e")
             setupItem.target = self
             menu.addItem(setupItem)
         } else {
-            let statusItem = NSMenuItem(title: running ? "🟢 실행 중" : "🔴 중지됨", action: nil, keyEquivalent: "")
+            let statusItem = NSMenuItem(title: running ? "🟢 Running" : "🔴 Stopped", action: nil, keyEquivalent: "")
             statusItem.isEnabled = false
             menu.addItem(statusItem)
             menu.addItem(NSMenuItem.separator())
 
             if running {
-                let stopItem = NSMenuItem(title: "봇 중지", action: #selector(stopBot), keyEquivalent: "s")
+                let stopItem = NSMenuItem(title: "Stop Bot", action: #selector(stopBot), keyEquivalent: "s")
                 stopItem.target = self
                 menu.addItem(stopItem)
 
-                let restartItem = NSMenuItem(title: "봇 재시작", action: #selector(restartBot), keyEquivalent: "r")
+                let restartItem = NSMenuItem(title: "Restart Bot", action: #selector(restartBot), keyEquivalent: "r")
                 restartItem.target = self
                 menu.addItem(restartItem)
             } else {
-                let startItem = NSMenuItem(title: "봇 시작", action: #selector(startBot), keyEquivalent: "s")
+                let startItem = NSMenuItem(title: "Start Bot", action: #selector(startBot), keyEquivalent: "s")
                 startItem.target = self
                 menu.addItem(startItem)
             }
 
             menu.addItem(NSMenuItem.separator())
 
-            let settingsItem = NSMenuItem(title: "설정 편집...", action: #selector(openSettings), keyEquivalent: "e")
+            let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: "e")
             settingsItem.target = self
             menu.addItem(settingsItem)
 
-            let logItem = NSMenuItem(title: "로그 보기", action: #selector(openLog), keyEquivalent: "l")
+            let logItem = NSMenuItem(title: "View Log", action: #selector(openLog), keyEquivalent: "l")
             logItem.target = self
             menu.addItem(logItem)
 
-            let folderItem = NSMenuItem(title: "폴더 열기", action: #selector(openFolder), keyEquivalent: "f")
+            let folderItem = NSMenuItem(title: "Open Folder", action: #selector(openFolder), keyEquivalent: "f")
             folderItem.target = self
             menu.addItem(folderItem)
         }
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "종료", action: #selector(quitAll), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitAll), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -139,23 +139,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let env = loadEnv()
 
         let alert = NSAlert()
-        alert.messageText = "Claude Discord Bot 설정"
-        alert.informativeText = "필수 항목을 입력해주세요."
+        alert.messageText = "Claude Discord Bot Settings"
+        alert.informativeText = "Please fill in the required fields."
         alert.alertStyle = .informational
-        alert.addButton(withTitle: "저장")
-        alert.addButton(withTitle: "취소")
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
 
         let width: CGFloat = 400
         let fieldHeight: CGFloat = 24
         let labelHeight: CGFloat = 18
         let spacing: CGFloat = 8
         let fields: [(label: String, key: String, placeholder: String, defaultValue: String)] = [
-            ("Discord Bot Token:", "DISCORD_BOT_TOKEN", "봇 토큰 입력", ""),
-            ("Discord Guild(서버) ID:", "DISCORD_GUILD_ID", "서버 ID 입력", ""),
-            ("허용할 User ID (쉼표 구분):", "ALLOWED_USER_IDS", "123456789,987654321", ""),
-            ("프로젝트 기본 디렉토리:", "BASE_PROJECT_DIR", botDir, botDir),
-            ("분당 요청 제한:", "RATE_LIMIT_PER_MINUTE", "10", "10"),
-            ("비용 표시 (true/false):", "SHOW_COST", "Max 플랜은 false 권장", "true"),
+            ("Discord Bot Token:", "DISCORD_BOT_TOKEN", "Enter bot token", ""),
+            ("Discord Guild ID:", "DISCORD_GUILD_ID", "Enter server ID", ""),
+            ("Allowed User IDs (comma-separated):", "ALLOWED_USER_IDS", "123456789,987654321", ""),
+            ("Base Project Directory:", "BASE_PROJECT_DIR", botDir, botDir),
+            ("Rate Limit Per Minute:", "RATE_LIMIT_PER_MINUTE", "10", "10"),
+            ("Show Cost (true/false):", "SHOW_COST", "false recommended for Max plan", "true"),
         ]
 
         let totalHeight = CGFloat(fields.count) * (labelHeight + fieldHeight + spacing) + 4
@@ -179,7 +179,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 // 토큰은 보안상 일부만 표시
                 let val = env[field.key] ?? ""
                 if val.count > 10 {
-                    input.placeholderString = "••••" + String(val.suffix(6)) + " (변경 시 전체 입력)"
+                    input.placeholderString = "••••" + String(val.suffix(6)) + " (enter full token to change)"
                     input.stringValue = ""
                 }
             }
@@ -212,8 +212,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                (newEnv["DISCORD_GUILD_ID"] ?? "").isEmpty ||
                (newEnv["ALLOWED_USER_IDS"] ?? "").isEmpty {
                 let errAlert = NSAlert()
-                errAlert.messageText = "필수 항목 누락"
-                errAlert.informativeText = "Bot Token, Guild ID, User ID는 필수입니다."
+                errAlert.messageText = "Required Fields Missing"
+                errAlert.informativeText = "Bot Token, Guild ID, and User IDs are required."
                 errAlert.alertStyle = .warning
                 errAlert.runModal()
                 return
