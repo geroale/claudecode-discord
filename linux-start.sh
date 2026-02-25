@@ -176,12 +176,12 @@ systemctl --user start "$SERVICE_NAME"
 TRAY_SCRIPT="$SCRIPT_DIR/tray/claude_tray.py"
 if [ -n "$DISPLAY" ] || [ -n "$WAYLAND_DISPLAY" ]; then
     if [ -f "$TRAY_SCRIPT" ] && command -v python3 &>/dev/null; then
-        # pystray 설치 확인 및 자동 설치
-        if ! python3 -c "import pystray" 2>/dev/null; then
+        # pystray + Pillow 설치 확인 및 자동 설치
+        if ! python3 -c "import pystray; from PIL import Image" 2>/dev/null; then
             echo "📦 트레이 앱 의존성 설치 중..."
             pip3 install pystray Pillow 2>/dev/null || pip install pystray Pillow 2>/dev/null
         fi
-        if python3 -c "import pystray" 2>/dev/null; then
+        if python3 -c "import pystray; from PIL import Image" 2>/dev/null; then
             pkill -f "claude_tray.py" 2>/dev/null
             nohup python3 "$TRAY_SCRIPT" > /dev/null 2>&1 &
             echo "🟢 봇이 백그라운드에서 시작되었습니다 (트레이 표시)"
