@@ -55,7 +55,7 @@ class ClaudeBotTray : Form
         // .env 없으면 설정 창 열기
         if (!File.Exists(envPath))
         {
-            Timer t = new System.Windows.Forms.Timer();
+            System.Windows.Forms.Timer t = new System.Windows.Forms.Timer();
             t.Interval = 500;
             t.Tick += (s, e) => { t.Stop(); OpenSettings(null, null); };
             t.Start();
