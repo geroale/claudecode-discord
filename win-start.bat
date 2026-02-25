@@ -96,12 +96,13 @@ if "%~1"=="--fg" (
 cd /d "%SCRIPT_DIR%"
 
 :: 이미 실행 중이면 종료 후 재시작
-schtasks /query /tn "%TASK_NAME%" >nul 2>&1
-if not errorlevel 1 (
+if exist "%SCRIPT_DIR%\.bot.lock" (
     echo 🔄 기존 봇 종료 중...
-    schtasks /end /tn "%TASK_NAME%" >nul 2>&1
-    schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
+    for /f "tokens=2" %%a in ('tasklist /fi "windowtitle eq ClaudeDiscordBot" /fo list 2^>nul ^| findstr "PID"') do (
+        taskkill /pid %%a /f >nul 2>&1
+    )
     wmic process where "commandline like '%%dist/index.js%%' and name='node.exe'" call terminate >nul 2>&1
+    del "%SCRIPT_DIR%\.bot.lock" >nul 2>&1
     timeout /t 2 /nobreak >nul
 )
 
@@ -157,8 +158,11 @@ if exist "%TRAY_EXE%" (
 if exist "%ENV_FILE%" (
     :: 작업 스케줄러 등록
     schtasks /create /tn "%TASK_NAME%" /tr "\"%SCRIPT_DIR%\win-start.bat\" --fg" /sc onlogon /rl highest /f >nul 2>&1
-    :: 봇 백그라운드 실행 (lock 파일로 상태 관리)
-    start "ClaudeDiscordBot" /min cmd /c "cd /d %SCRIPT_DIR% && echo running> .bot.lock && node dist/index.js & del .bot.lock"
+    :: 봇 백그라운드 실행 (완전 숨김, lock 파일로 상태 관리)
+    echo Set ws = CreateObject^("WScript.Shell"^) > "%SCRIPT_DIR%\.bot-run.vbs"
+    echo ws.Run "cmd /c cd /d %SCRIPT_DIR% ^& echo running^> .bot.lock ^& node dist/index.js ^& del .bot.lock", 0, False >> "%SCRIPT_DIR%\.bot-run.vbs"
+    wscript "%SCRIPT_DIR%\.bot-run.vbs"
+    del "%SCRIPT_DIR%\.bot-run.vbs" >nul 2>&1
     echo 🟢 Bot started in background
 ) else (
     echo ⚙️ .env not found. Please configure settings from the tray icon.

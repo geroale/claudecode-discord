@@ -234,10 +234,46 @@ class ClaudeBotTray : Form
 
     private void StartBot(object sender, EventArgs e)
     {
-        RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\"", false);
-        Thread.Sleep(2000);
+        KillBot();
+        // Run bot hidden via vbs
+        string vbs = Path.Combine(botDir, ".bot-start.vbs");
+        string cmd = "cmd /c cd /d " + botDir + " & echo running> .bot.lock & node dist/index.js & del .bot.lock";
+        File.WriteAllText(vbs, "Set ws = CreateObject(\"WScript.Shell\")\nws.Run \"" + cmd.Replace("\"", "\"\"") + "\", 0, False\n");
+        Process.Start("wscript", "\"" + vbs + "\"");
+        Thread.Sleep(3000);
+        try { File.Delete(vbs); } catch { }
         UpdateStatus();
         BuildMenu();
+    }
+
+    private void KillBot()
+    {
+        // Kill node processes running dist/index.js
+        try
+        {
+            var proc = new Process();
+            proc.StartInfo.FileName = "wmic";
+            proc.StartInfo.Arguments = "process where \"commandline like '%dist/index.js%' and name='node.exe'\" call terminate";
+            proc.StartInfo.UseShellExecute = false;
+            proc.StartInfo.CreateNoWindow = true;
+            proc.Start();
+            proc.WaitForExit();
+        }
+        catch { }
+        // Also try taskkill for cmd windows
+        try
+        {
+            var proc = new Process();
+            proc.StartInfo.FileName = "cmd.exe";
+            proc.StartInfo.Arguments = "/c for /f \"tokens=2\" %a in ('tasklist /fi \"windowtitle eq ClaudeDiscordBot\" /fo list 2^>nul ^| findstr \"PID\"') do taskkill /pid %a /f >nul 2>&1";
+            proc.StartInfo.UseShellExecute = false;
+            proc.StartInfo.CreateNoWindow = true;
+            proc.Start();
+            proc.WaitForExit();
+        }
+        catch { }
+        string lockFile = Path.Combine(botDir, ".bot.lock");
+        try { File.Delete(lockFile); } catch { }
     }
 
     private bool IsAutoStartEnabled()
@@ -273,7 +309,7 @@ class ClaudeBotTray : Form
 
     private void StopBot(object sender, EventArgs e)
     {
-        RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\" --stop", true);
+        KillBot();
         Thread.Sleep(1000);
         UpdateStatus();
         BuildMenu();
@@ -281,12 +317,9 @@ class ClaudeBotTray : Form
 
     private void RestartBot(object sender, EventArgs e)
     {
-        RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\" --stop", true);
+        KillBot();
         Thread.Sleep(2000);
-        RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\"", false);
-        Thread.Sleep(2000);
-        UpdateStatus();
-        BuildMenu();
+        StartBot(null, null);
     }
 
     private void OpenLog(object sender, EventArgs e)
@@ -463,10 +496,7 @@ class ClaudeBotTray : Form
 
     private void QuitAll(object sender, EventArgs e)
     {
-        if (IsRunning())
-        {
-            RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\" --stop", true);
-        }
+        KillBot();
         trayIcon.Visible = false;
         Application.Exit();
     }
