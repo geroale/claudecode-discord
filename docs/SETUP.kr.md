@@ -110,6 +110,8 @@ npm run build   # 타입 에러 없이 빌드되는지 확인
    - **MESSAGE CONTENT INTENT** → 활성화 (필수!)
    - Save Changes
 
+   ![Message Content Intent](message-content-intent.png)
+
 ### 2-3. 봇을 서버에 초대
 
 1. 왼쪽 메뉴 **"OAuth2"** 클릭

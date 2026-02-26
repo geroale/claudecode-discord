@@ -110,6 +110,8 @@ npm run build   # Check for type errors
    - Enable **MESSAGE CONTENT INTENT** (required!)
    - Save Changes
 
+   ![Message Content Intent](docs/message-content-intent.png)
+
 ### 2-3. Invite Bot to Server
 
 1. Click **"OAuth2"** in the left menu
