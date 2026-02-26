@@ -425,28 +425,17 @@ class ClaudeBotTray : Form
 
     private void KillBot()
     {
-        // Kill node.exe processes running dist/index.js
+        // Use PowerShell to reliably find and kill bot processes (node.exe + cmd.exe)
+        // cmd.exe /c wmic fails because % in LIKE clause gets interpreted as env vars
         try
         {
             var proc = new Process();
-            proc.StartInfo.FileName = "cmd.exe";
-            proc.StartInfo.Arguments = "/c wmic process where \"commandline like '%dist/index.js%' and name='node.exe'\" call terminate >nul 2>&1";
+            proc.StartInfo.FileName = "powershell";
+            proc.StartInfo.Arguments = "-NoProfile -Command \"Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like '*dist/index.js*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }\"";
             proc.StartInfo.UseShellExecute = false;
             proc.StartInfo.CreateNoWindow = true;
             proc.Start();
-            proc.WaitForExit(5000);
-        }
-        catch { }
-        // Kill associated cmd.exe processes (the hidden shells wrapping the bot)
-        try
-        {
-            var proc = new Process();
-            proc.StartInfo.FileName = "cmd.exe";
-            proc.StartInfo.Arguments = "/c wmic process where \"commandline like '%dist/index.js%' and name='cmd.exe'\" call terminate >nul 2>&1";
-            proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.CreateNoWindow = true;
-            proc.Start();
-            proc.WaitForExit(5000);
+            proc.WaitForExit(10000);
         }
         catch { }
         string lockFile = Path.Combine(botDir, ".bot.lock");
