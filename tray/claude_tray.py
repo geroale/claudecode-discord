@@ -566,12 +566,18 @@ def main():
         menu=create_menu(),
     )
 
-    # .env 없거나 설정 안 됐으면 자동으로 설정 창 열기
     if not is_env_configured():
+        # .env 없으면 자동으로 설정 창 열기
         def auto_open_settings():
             time.sleep(1)
             edit_settings(icon, None)
         threading.Thread(target=auto_open_settings, daemon=True).start()
+    elif not is_running():
+        # .env 있고 봇이 안 돌면 자동 시작
+        def auto_start():
+            time.sleep(1)
+            start_bot(icon, None)
+        threading.Thread(target=auto_start, daemon=True).start()
 
     refresh_thread = threading.Thread(target=refresh_loop, args=(icon,), daemon=True)
     refresh_thread.start()

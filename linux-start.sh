@@ -166,6 +166,29 @@ if is_env_configured; then
 else
     echo "⚙️ .env not configured. Please configure settings from the tray icon."
 fi
+
+# Create desktop shortcut
+DESKTOP_FILE="$HOME/Desktop/Claude Discord Bot.desktop"
+if [ ! -f "$DESKTOP_FILE" ]; then
+    # Try to find an icon, fallback to no icon
+    ICON_PATH="$SCRIPT_DIR/docs/icon.png"
+    cat > "$DESKTOP_FILE" << DEOF
+[Desktop Entry]
+Type=Application
+Name=Claude Discord Bot
+Comment=Claude Discord Bot Tray Manager
+Exec=/bin/bash $SCRIPT_DIR/linux-start.sh
+Icon=$ICON_PATH
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+DEOF
+    chmod +x "$DESKTOP_FILE"
+    # Mark as trusted (GNOME/Ubuntu)
+    gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
+    echo "🖥️ Desktop shortcut created"
+fi
+
 echo "   Stop:   ./linux-start.sh --stop"
 echo "   Status: ./linux-start.sh --status"
 echo "   Log:    tail -f bot.log"
