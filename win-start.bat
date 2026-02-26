@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 
 :: Claude Discord Bot - Windows Auto-update & Start Script
 :: 사용법:
-::   win-start.bat          → 백그라운드 실행 (작업 스케줄러 등록)
+::   win-start.bat          → 백그라운드 실행 + 트레이 앱 시작
 ::   win-start.bat --fg     → 포그라운드 실행 (디버깅용)
 ::   win-start.bat --stop   → 중지
 ::   win-start.bat --status → 상태 확인
@@ -12,7 +12,6 @@ setlocal enabledelayedexpansion
 set "SCRIPT_DIR=%~dp0"
 set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "ENV_FILE=%SCRIPT_DIR%\.env"
-set "TASK_NAME=ClaudeDiscordBot"
 set "TRAY_EXE=%SCRIPT_DIR%\tray\ClaudeBotTray.exe"
 set "TRAY_SRC=%SCRIPT_DIR%\tray\ClaudeBotTray.cs"
 
@@ -26,8 +25,6 @@ if errorlevel 1 (
 
 :: --stop: 중지
 if "%~1"=="--stop" (
-    schtasks /end /tn "%TASK_NAME%" >nul 2>&1
-    schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
     :: 봇 프로세스 종료
     for /f "tokens=2" %%a in ('tasklist /fi "windowtitle eq ClaudeDiscordBot" /fo list 2^>nul ^| findstr "PID"') do (
         taskkill /pid %%a /f >nul 2>&1
@@ -44,17 +41,10 @@ if "%~1"=="--stop" (
 
 :: --status: 상태 확인
 if "%~1"=="--status" (
-    schtasks /query /tn "%TASK_NAME%" >nul 2>&1
-    if errorlevel 1 (
-        echo 🔴 봇 중지됨
+    if exist "%SCRIPT_DIR%\.bot.lock" (
+        echo 🟢 봇 실행 중
     ) else (
-        echo 🟢 봇 등록됨
-        wmic process where "commandline like '%%dist/index.js%%' and name='node.exe'" get processid 2>nul | findstr /r "[0-9]" >nul 2>&1
-        if errorlevel 1 (
-            echo    프로세스: 중지됨
-        ) else (
-            echo    프로세스: 실행 중
-        )
+        echo 🔴 봇 중지됨
     )
     exit /b 0
 )
@@ -148,17 +138,16 @@ if not exist "%TRAY_EXE%" (
     )
 )
 
-:: 트레이 앱 실행
+:: 트레이 앱 실행 (--show로 컨트롤 패널 자동 열기)
 if exist "%TRAY_EXE%" (
     taskkill /im ClaudeBotTray.exe /f >nul 2>&1
-    start "" "%TRAY_EXE%"
+    start "" "%TRAY_EXE%" --show
 )
 
 :: .env 있으면 봇 시작, 없으면 트레이에서 설정하도록
 if exist "%ENV_FILE%" (
-    :: 작업 스케줄러 등록
-    schtasks /create /tn "%TASK_NAME%" /tr "\"%SCRIPT_DIR%\win-start.bat\" --fg" /sc onlogon /rl highest /f >nul 2>&1
     :: 봇 백그라운드 실행 (완전 숨김, lock 파일로 상태 관리)
+    :: (자동 시작은 트레이 앱의 Registry 설정으로 관리)
     echo Set ws = CreateObject^("WScript.Shell"^) > "%SCRIPT_DIR%\.bot-run.vbs"
     echo ws.Run "cmd /c cd /d %SCRIPT_DIR% ^& echo running^> .bot.lock ^& node dist/index.js ^& del .bot.lock", 0, False >> "%SCRIPT_DIR%\.bot-run.vbs"
     wscript "%SCRIPT_DIR%\.bot-run.vbs"

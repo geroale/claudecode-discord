@@ -11,11 +11,11 @@ Complete guide for installing and running the Discord bot that manages Claude Co
 After cloning, run the install script to automatically check and install Node.js, Claude Code CLI, and npm packages.
 
 ```bash
-# SSH
-git clone git@github.com:chadingTV/claudecode-discord.git
-
-# or HTTPS
+# HTTPS
 git clone https://github.com/chadingTV/claudecode-discord.git
+
+# or SSH
+git clone git@github.com:chadingTV/claudecode-discord.git
 
 cd claudecode-discord
 
@@ -23,7 +23,7 @@ cd claudecode-discord
 ./install.sh
 
 # Windows (cmd or PowerShell)
-install.bat
+./install.bat
 ```
 
 Once the script completes, edit the `.env` file and run `npm run dev`.

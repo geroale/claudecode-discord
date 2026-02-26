@@ -6,6 +6,36 @@ Run independent Claude Code sessions per channel, with tool use approval/denial 
 
 > **[Korean documentation (한국어)](README.kr.md)**
 
+## Why This Bot? — vs Official Remote Control
+
+Anthropic's [Remote Control](https://code.claude.com/docs/en/remote-control) lets you view a running local session from your phone. This bot goes further — it's a **multi-machine agent hub** that runs as a daemon, creates new sessions on demand, and supports team collaboration.
+
+| | Official Remote Control | This Bot |
+|---|---|---|
+| **What it is** | Session viewer | Session controller |
+| **Starting a task** | Must open terminal first, then `claude remote-control` | Just send a message in Discord |
+| **Terminal dependency** | Closes terminal = session dies (10min timeout) | Bot daemon stays alive independently |
+| **New sessions from mobile** | Not possible (existing sessions only) | Send a message = new session |
+| **Concurrent sessions** | 1 per machine | Multiple (one per channel) |
+| **Multi-PC control** | Switch sessions manually per machine | One Discord server = all machines |
+| **Team collaboration** | Single user only | Team members can observe and approve |
+| **Notifications** | Must check the app manually | Discord push notifications |
+| **Dashboard** | None | Channel list = project dashboard |
+
+### Multi-PC Hub
+
+Create a separate Discord bot per machine, invite them all to the same server, and assign channels:
+
+```
+Your Discord Server
+├── #work-mac-frontend     ← Bot on work Mac
+├── #work-mac-backend      ← Bot on work Mac
+├── #home-pc-sideproject   ← Bot on home PC
+├── #cloud-server-infra    ← Bot on cloud server
+```
+
+**Control every machine's Claude Code from a single phone.** The channel list itself becomes your real-time status dashboard across all machines and projects.
+
 ## Features
 
 - 📱 Remote control Claude Code from Discord (desktop/web/mobile)
@@ -33,7 +63,10 @@ Run independent Claude Code sessions per channel, with tool use approval/denial 
 ## Installation
 
 ```bash
+git clone https://github.com/chadingTV/claudecode-discord.git
+or
 git clone git@github.com:chadingTV/claudecode-discord.git
+
 cd claudecode-discord
 
 # Auto install (Node.js, Claude Code CLI, npm packages)

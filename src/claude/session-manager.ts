@@ -362,9 +362,29 @@ class SessionManager {
         }
       }
     } catch (error) {
-      const errMsg =
+      const rawMsg =
         error instanceof Error ? error.message : "Unknown error occurred";
-      await channel.send(`❌ Error: ${errMsg}`);
+
+      // Parse API error JSON to show clean message
+      let errMsg = rawMsg;
+      const jsonMatch = rawMsg.match(
+        /API Error: (\d+)\s*(\{.*\})/s,
+      );
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[2]);
+          const statusCode = jsonMatch[1];
+          const message =
+            parsed?.error?.message ?? parsed?.message ?? "Unknown error";
+          errMsg = `API Error ${statusCode}: ${message}. Please try again later.`;
+        } catch {
+          // JSON parse failed, use raw message
+        }
+      } else if (rawMsg.includes("process exited with code")) {
+        errMsg = `${rawMsg}. The server may be temporarily unavailable — please try again later.`;
+      }
+
+      await channel.send(`❌ ${errMsg}`);
       updateSessionStatus(channelId, "offline");
     } finally {
       clearInterval(heartbeatInterval);

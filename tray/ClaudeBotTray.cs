@@ -59,6 +59,13 @@ class ClaudeBotTray : Form
         // Initial update check
         CheckForUpdates();
 
+        bool showPanel = false;
+        string[] args = Environment.GetCommandLineArgs();
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--show") showPanel = true;
+        }
+
         if (!File.Exists(envPath))
         {
             // .env 없으면 설정 창 열기
@@ -74,6 +81,14 @@ class ClaudeBotTray : Form
             t.Interval = 1000;
             t.Tick += (s, e) => { t.Stop(); StartBot(null, null); };
             t.Start();
+        }
+
+        if (showPanel)
+        {
+            System.Windows.Forms.Timer st = new System.Windows.Forms.Timer();
+            st.Interval = 1500;
+            st.Tick += (s, e) => { st.Stop(); ShowControlPanel(); };
+            st.Start();
         }
     }
 
@@ -116,20 +131,88 @@ class ClaudeBotTray : Form
         bool wasRunning = IsRunning();
         if (wasRunning)
         {
-            RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\" --stop", true);
+            KillBot();
             Thread.Sleep(2000);
         }
 
+        // git pull
         RunCmdOutput("git", "-C \"" + botDir + "\" pull origin main");
+        // npm install & build
         RunCmd("cd /d \"" + botDir + "\" && npm install --production && npm run build", true);
 
         currentVersion = GetVersion();
         updateAvailable = false;
 
+        // Tray exe 재컴파일 및 재시작
+        // 실행 중인 자기 자신은 삭제 불가하므로 bat 스크립트로 대기 후 교체
+        string trayExe = Application.ExecutablePath;
+        string traySrc = Path.Combine(Path.GetDirectoryName(trayExe), "ClaudeBotTray.cs");
+        string updateBat = Path.Combine(botDir, ".tray-update.bat");
+
+        if (File.Exists(traySrc))
+        {
+            // CSC 경로 찾기용 bat 스크립트 생성
+            string batContent =
+                "@echo off\r\n" +
+                "chcp 65001 >nul 2>&1\r\n" +
+                "setlocal enabledelayedexpansion\r\n" +
+                ":: Wait for tray process to exit\r\n" +
+                "timeout /t 2 /nobreak >nul\r\n" +
+                ":WAITLOOP\r\n" +
+                "tasklist /fi \"imagename eq ClaudeBotTray.exe\" 2>nul | findstr /i \"ClaudeBotTray.exe\" >nul 2>&1\r\n" +
+                "if not errorlevel 1 (\r\n" +
+                "    timeout /t 1 /nobreak >nul\r\n" +
+                "    goto WAITLOOP\r\n" +
+                ")\r\n" +
+                ":: Delete old exe\r\n" +
+                "del \"" + trayExe + "\" >nul 2>&1\r\n" +
+                ":: Find csc.exe\r\n" +
+                "set \"CSC=\"\r\n" +
+                "for /f \"delims=\" %%i in ('dir /b /s \"%WINDIR%\\Microsoft.NET\\Framework64\\csc.exe\" 2^>nul') do set \"CSC=%%i\"\r\n" +
+                "if \"!CSC!\"==\"\" (\r\n" +
+                "    for /f \"delims=\" %%i in ('dir /b /s \"%WINDIR%\\Microsoft.NET\\Framework\\csc.exe\" 2^>nul') do set \"CSC=%%i\"\r\n" +
+                ")\r\n" +
+                ":: Compile new tray exe\r\n" +
+                "if not \"!CSC!\"==\"\" (\r\n" +
+                "    \"!CSC!\" /nologo /target:winexe /out:\"" + trayExe + "\" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll \"" + traySrc + "\"\r\n" +
+                ")\r\n" +
+                ":: Restart tray with --show\r\n" +
+                "if exist \"" + trayExe + "\" (\r\n" +
+                "    start \"\" \"" + trayExe + "\" --show\r\n" +
+                ")\r\n" +
+                ":: Start bot if it was running\r\n";
+
+            if (wasRunning)
+            {
+                batContent +=
+                    "timeout /t 2 /nobreak >nul\r\n" +
+                    "echo Set ws = CreateObject(\"WScript.Shell\") > \"" + botDir + "\\.bot-start.vbs\"\r\n" +
+                    "echo ws.Run \"cmd /c cd /d " + botDir + " ^& echo running^> .bot.lock ^& node dist/index.js ^& del .bot.lock\", 0, False >> \"" + botDir + "\\.bot-start.vbs\"\r\n" +
+                    "wscript \"" + botDir + "\\.bot-start.vbs\"\r\n" +
+                    "del \"" + botDir + "\\.bot-start.vbs\" >nul 2>&1\r\n";
+            }
+
+            batContent += "del \"" + updateBat + "\" >nul 2>&1\r\n";
+
+            File.WriteAllText(updateBat, batContent);
+
+            // VBS로 bat을 숨겨서 실행
+            string vbs = Path.Combine(botDir, ".tray-update.vbs");
+            File.WriteAllText(vbs,
+                "Set ws = CreateObject(\"WScript.Shell\")\n" +
+                "ws.Run \"cmd /c \"\"" + updateBat + "\"\"\", 0, False\n");
+            Process.Start("wscript", "\"" + vbs + "\"");
+
+            // 자기 자신 종료 (bat이 대기 후 처리)
+            trayIcon.Visible = false;
+            Application.Exit();
+            return;
+        }
+
+        // traySrc 없으면 (비정상 상황) 그냥 봇만 재시작
         if (wasRunning)
         {
-            RunCmd("\"" + Path.Combine(botDir, "win-start.bat") + "\"", false);
-            Thread.Sleep(2000);
+            StartBot(null, null);
         }
 
         MessageBox.Show("Updated to version: " + currentVersion, "Update Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -268,9 +351,10 @@ class ClaudeBotTray : Form
                 UpdateStatus();
                 BuildMenu();
                 trayIcon.BalloonTipTitle = "Claude Bot Started";
-                trayIcon.BalloonTipText = "Bot is running. Right-click tray icon to manage.";
+                trayIcon.BalloonTipText = "Bot is running. Click tray icon to manage.";
                 trayIcon.BalloonTipIcon = ToolTipIcon.Info;
                 trayIcon.ShowBalloonTip(3000);
+                trayIcon.BalloonTipClicked += (s3, e3) => { ShowControlPanel(); };
             }
             else if (waitCount > 10)
             {
@@ -317,30 +401,34 @@ class ClaudeBotTray : Form
     {
         try
         {
-            var proc = new Process();
-            proc.StartInfo.FileName = "schtasks";
-            proc.StartInfo.Arguments = "/query /tn \"" + taskName + "\"";
-            proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.RedirectStandardOutput = true;
-            proc.StartInfo.CreateNoWindow = true;
-            proc.Start();
-            proc.WaitForExit();
-            return proc.ExitCode == 0;
+            var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false);
+            if (key == null) return false;
+            object val = key.GetValue(taskName);
+            key.Close();
+            return val != null;
         }
         catch { return false; }
     }
 
     private void ToggleAutoStart(object sender, EventArgs e)
     {
-        if (IsAutoStartEnabled())
+        try
         {
-            RunCmd("schtasks /delete /tn \"" + taskName + "\" /f", true);
+            var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+            if (key == null) return;
+            if (IsAutoStartEnabled())
+            {
+                key.DeleteValue(taskName, false);
+            }
+            else
+            {
+                key.SetValue(taskName, "\"" + Application.ExecutablePath + "\"");
+            }
+            key.Close();
         }
-        else
-        {
-            string exePath = Application.ExecutablePath;
-            RunCmd("schtasks /create /tn \"" + taskName + "\" /tr \"\\\"" + exePath + "\\\"\" /sc onlogon /rl highest /f", true);
-        }
+        catch { }
         BuildMenu();
     }
 
@@ -545,105 +633,118 @@ class ClaudeBotTray : Form
         bool running = IsRunning();
         bool hasEnv = File.Exists(envPath);
 
+        int panelWidth = 420;
+        int btnWidth = panelWidth - 50;
+        int halfBtnWidth = (btnWidth - 10) / 2;
+
         controlPanel = new Form()
         {
             Text = "Claude Discord Bot",
-            Width = 340,
-            Height = 380,
+            Width = panelWidth,
+            Height = 480,
             StartPosition = FormStartPosition.CenterScreen,
             FormBorderStyle = FormBorderStyle.FixedDialog,
             MaximizeBox = false,
             MinimizeBox = false,
         };
 
-        int y = 15;
+        int y = 20;
 
         // Status indicator
         string statusText = !hasEnv ? "Setup Required" : (running ? "Running" : "Stopped");
         Color statusColor = !hasEnv ? Color.Orange : (running ? Color.LimeGreen : Color.Red);
-        var statusPanel = new Panel() { Left = 15, Top = y, Width = 295, Height = 40, BackColor = Color.FromArgb(245, 245, 245) };
-        var statusDot = new Label() { Left = 10, Top = 10, Width = 20, Height = 20, Text = "" };
+        var statusPanel = new Panel() { Left = 20, Top = y, Width = btnWidth, Height = 45, BackColor = Color.FromArgb(240, 240, 240) };
+        var statusDot = new Label() { Left = 12, Top = 12, Width = 22, Height = 22, Text = "" };
         statusDot.Paint += (s, e) => {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            e.Graphics.FillEllipse(new SolidBrush(statusColor), 2, 2, 14, 14);
+            e.Graphics.FillEllipse(new SolidBrush(statusColor), 2, 2, 16, 16);
         };
         statusPanel.Controls.Add(statusDot);
-        var statusLabel = new Label() { Left = 32, Top = 11, Width = 250, Height = 20, Text = statusText, Font = new Font(FontFamily.GenericSansSerif, 10, FontStyle.Bold) };
+        var statusLabel = new Label() { Left = 38, Top = 13, Width = 300, Height = 22, Text = statusText, Font = new Font(FontFamily.GenericSansSerif, 11, FontStyle.Bold) };
         statusPanel.Controls.Add(statusLabel);
         controlPanel.Controls.Add(statusPanel);
-        y += 50;
+        y += 55;
 
         // Bot control buttons
         if (hasEnv)
         {
             if (running)
             {
-                var stopBtn = new Button() { Text = "Stop Bot", Left = 15, Top = y, Width = 140, Height = 32 };
+                var stopBtn = new Button() { Text = "Stop Bot", Left = 20, Top = y, Width = halfBtnWidth, Height = 36 };
                 stopBtn.Click += (s, ev) => { StopBot(null, null); controlPanel.Close(); };
                 controlPanel.Controls.Add(stopBtn);
 
-                var restartBtn = new Button() { Text = "Restart Bot", Left = 165, Top = y, Width = 140, Height = 32 };
+                var restartBtn = new Button() { Text = "Restart Bot", Left = 20 + halfBtnWidth + 10, Top = y, Width = halfBtnWidth, Height = 36 };
                 restartBtn.Click += (s, ev) => { RestartBot(null, null); controlPanel.Close(); };
                 controlPanel.Controls.Add(restartBtn);
             }
             else
             {
-                var startBtn = new Button() { Text = "Start Bot", Left = 15, Top = y, Width = 290, Height = 32 };
+                var startBtn = new Button() { Text = "Start Bot", Left = 20, Top = y, Width = btnWidth, Height = 36 };
                 startBtn.Click += (s, ev) => { StartBot(null, null); controlPanel.Close(); };
                 controlPanel.Controls.Add(startBtn);
             }
-            y += 42;
+            y += 46;
         }
 
         // Settings button
-        var settingsBtn = new Button() { Text = "Settings...", Left = 15, Top = y, Width = 290, Height = 32 };
+        var settingsBtn = new Button() { Text = "Settings...", Left = 20, Top = y, Width = btnWidth, Height = 36 };
         settingsBtn.Click += (s, ev) => { controlPanel.Close(); OpenSettings(null, null); };
         controlPanel.Controls.Add(settingsBtn);
-        y += 38;
+        y += 42;
 
         if (hasEnv)
         {
             // View Log
-            var logBtn = new Button() { Text = "View Log", Left = 15, Top = y, Width = 140, Height = 32 };
+            var logBtn = new Button() { Text = "View Log", Left = 20, Top = y, Width = halfBtnWidth, Height = 36 };
             logBtn.Click += (s, ev) => { OpenLog(null, null); };
             controlPanel.Controls.Add(logBtn);
 
             // Open Folder
-            var folderBtn = new Button() { Text = "Open Folder", Left = 165, Top = y, Width = 140, Height = 32 };
+            var folderBtn = new Button() { Text = "Open Folder", Left = 20 + halfBtnWidth + 10, Top = y, Width = halfBtnWidth, Height = 36 };
             folderBtn.Click += (s, ev) => { OpenFolder(null, null); };
             controlPanel.Controls.Add(folderBtn);
-            y += 38;
+            y += 42;
         }
 
         // Auto-start checkbox
-        var autoCheck = new CheckBox() { Text = "Auto Run on Startup", Left = 15, Top = y, Width = 290, Checked = IsAutoStartEnabled() };
+        var autoCheck = new CheckBox() { Text = "Auto Run on Startup", Left = 20, Top = y, Width = btnWidth, Font = new Font(FontFamily.GenericSansSerif, 9), Checked = IsAutoStartEnabled() };
         autoCheck.CheckedChanged += (s, ev) => { ToggleAutoStart(null, null); };
         controlPanel.Controls.Add(autoCheck);
-        y += 28;
+        y += 30;
 
         // Version
-        var verLabel = new Label() { Text = "Version: " + currentVersion, Left = 15, Top = y, Width = 290, ForeColor = Color.Gray };
+        var verLabel = new Label() { Text = "Version: " + currentVersion, Left = 20, Top = y, Width = btnWidth, ForeColor = Color.Gray };
         controlPanel.Controls.Add(verLabel);
-        y += 22;
+        y += 24;
 
         // Update button
         if (updateAvailable)
         {
-            var updateBtn = new Button() { Text = "Update Available - Click to Update", Left = 15, Top = y, Width = 290, Height = 32, BackColor = Color.FromArgb(66, 133, 244), ForeColor = Color.White };
+            var updateBtn = new Button() { Text = "Update Available - Click to Update", Left = 20, Top = y, Width = btnWidth, Height = 36, BackColor = Color.FromArgb(66, 133, 244), ForeColor = Color.White };
             updateBtn.FlatStyle = FlatStyle.Flat;
             updateBtn.Click += (s, ev) => { controlPanel.Close(); PerformUpdate(null, null); };
             controlPanel.Controls.Add(updateBtn);
-            y += 38;
+            y += 42;
         }
 
-        // Quit button
-        y += 5;
-        var quitBtn = new Button() { Text = "Quit", Left = 15, Top = y, Width = 290, Height = 32, ForeColor = Color.Gray };
-        quitBtn.Click += (s, ev) => { controlPanel.Close(); QuitAll(null, null); };
-        controlPanel.Controls.Add(quitBtn);
+        // Info message
+        var infoLabel = new Label() {
+            Text = "Closing this window does not stop the bot.\nThe bot runs in the background. Check the tray icon for status.",
+            Left = 20, Top = y, Width = btnWidth, Height = 36,
+            ForeColor = Color.FromArgb(100, 100, 100),
+            Font = new Font(FontFamily.GenericSansSerif, 8)
+        };
+        controlPanel.Controls.Add(infoLabel);
         y += 42;
 
-        controlPanel.Height = y + 10;
+        // Quit button
+        var quitBtn = new Button() { Text = "Quit Bot", Left = 20, Top = y, Width = btnWidth, Height = 36, ForeColor = Color.Gray };
+        quitBtn.Click += (s, ev) => { controlPanel.Close(); QuitAll(null, null); };
+        controlPanel.Controls.Add(quitBtn);
+        y += 46;
+
+        controlPanel.Height = y + 15;
         controlPanel.ShowDialog();
         controlPanel = null;
     }
