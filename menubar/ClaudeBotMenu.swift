@@ -8,8 +8,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var contextMenu: NSMenu?
     private var timer: Timer?
     private let label = "com.claude-discord"
+    private let menubarLabel = "com.claude-discord-menubar"
     private var botDir: String
     private var plistDst: String
+    private var menubarPlistDst: String
     private var envPath: String
     private var langPrefFile: String
     private var currentVersion: String = "unknown"
@@ -21,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let scriptDir = (CommandLine.arguments[0] as NSString).deletingLastPathComponent
         botDir = (scriptDir as NSString).deletingLastPathComponent
         plistDst = NSHomeDirectory() + "/Library/LaunchAgents/com.claude-discord.plist"
+        menubarPlistDst = NSHomeDirectory() + "/Library/LaunchAgents/com.claude-discord-menubar.plist"
         envPath = botDir + "/.env"
         langPrefFile = botDir + "/.tray-lang"
         super.init()
@@ -267,7 +270,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Auto-start toggle
         let autoStartItem = NSMenuItem(title: L("Launch on System Startup", "시스템 시작 시 자동 실행"), action: #selector(toggleAutoStart), keyEquivalent: "")
         autoStartItem.target = self
-        autoStartItem.state = FileManager.default.fileExists(atPath: plistDst) ? .on : .off
+        autoStartItem.state = isAutoStartEnabled() ? .on : .off
         menu.addItem(autoStartItem)
 
         // Language toggle submenu
@@ -518,7 +521,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Auto-start checkbox
         let autoStartBtn = NSButton(checkboxWithTitle: L("Launch on System Startup", "시스템 시작 시 자동 실행"), target: self, action: #selector(toggleAutoStart))
-        autoStartBtn.state = FileManager.default.fileExists(atPath: plistDst) ? .on : .off
+        autoStartBtn.state = isAutoStartEnabled() ? .on : .off
         autoStartBtn.font = NSFont.systemFont(ofSize: 12)
         elements.append((autoStartBtn, 26))
 
@@ -959,15 +962,49 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleAutoStart() {
-        if FileManager.default.fileExists(atPath: plistDst) {
-            runShell("launchctl unload '\(plistDst)' 2>/dev/null")
-            try? FileManager.default.removeItem(atPath: plistDst)
+        if isAutoStartEnabled() {
+            // Disable: remove menubar autostart plist
+            runShell("launchctl unload '\(menubarPlistDst)' 2>/dev/null")
+            try? FileManager.default.removeItem(atPath: menubarPlistDst)
         } else {
-            generatePlist()
-            runShell("launchctl load '\(plistDst)'")
+            // Enable: register menubar app to launch on login
+            // (menubar app auto-starts bot when it launches)
+            generateMenubarPlist()
+            runShell("launchctl load '\(menubarPlistDst)'")
         }
         buildMenu()
         rebuildControlPanel()
+    }
+
+    private func isAutoStartEnabled() -> Bool {
+        return FileManager.default.fileExists(atPath: menubarPlistDst)
+    }
+
+    private func generateMenubarPlist() {
+        let menubarBin = "\(botDir)/menubar/ClaudeBotMenu"
+        let content = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>Label</key>
+            <string>\(menubarLabel)</string>
+            <key>ProgramArguments</key>
+            <array>
+                <string>\(menubarBin)</string>
+            </array>
+            <key>WorkingDirectory</key>
+            <string>\(botDir)</string>
+            <key>RunAtLoad</key>
+            <true/>
+            <key>StandardOutPath</key>
+            <string>/dev/null</string>
+            <key>StandardErrorPath</key>
+            <string>/dev/null</string>
+        </dict>
+        </plist>
+        """
+        try? content.write(toFile: menubarPlistDst, atomically: true, encoding: .utf8)
     }
 
     // MARK: - Plist Generation
