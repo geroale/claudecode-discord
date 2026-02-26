@@ -677,12 +677,7 @@ class ClaudeBotTray : Form
             return;
         }
 
-        bool running = IsRunning();
-        bool hasEnv = File.Exists(envPath);
-
         int panelWidth = 460;
-        int btnWidth = panelWidth - 60;
-        int halfBtnWidth = (btnWidth - 10) / 2;
 
         controlPanel = new Form()
         {
@@ -694,6 +689,29 @@ class ClaudeBotTray : Form
             MaximizeBox = false,
             MinimizeBox = false,
         };
+
+        RebuildControlPanel();
+        controlPanel.ShowDialog();
+        controlPanel = null;
+    }
+
+    private void RebuildControlPanel()
+    {
+        if (controlPanel == null || controlPanel.IsDisposed) return;
+
+        // Remember position
+        Point pos = controlPanel.Location;
+        bool wasVisible = controlPanel.Visible;
+
+        controlPanel.SuspendLayout();
+        controlPanel.Controls.Clear();
+
+        bool running = IsRunning();
+        bool hasEnv = File.Exists(envPath);
+
+        int panelWidth = controlPanel.Width;
+        int btnWidth = panelWidth - 60;
+        int halfBtnWidth = (btnWidth - 10) / 2;
 
         int y = 15;
 
@@ -734,8 +752,8 @@ class ClaudeBotTray : Form
             BackColor = isKorean ? Color.FromArgb(66, 133, 244) : Color.FromArgb(230, 230, 230),
             Cursor = Cursors.Hand
         };
-        enBtn.Click += (s, ev) => { SetLanguage(false); controlPanel.Close(); ShowControlPanel(); };
-        krBtn.Click += (s, ev) => { SetLanguage(true); controlPanel.Close(); ShowControlPanel(); };
+        enBtn.Click += (s, ev) => { SetLanguage(false); RebuildControlPanel(); };
+        krBtn.Click += (s, ev) => { SetLanguage(true); RebuildControlPanel(); };
         controlPanel.Controls.Add(enBtn);
         controlPanel.Controls.Add(divLabel);
         controlPanel.Controls.Add(krBtn);
@@ -853,8 +871,14 @@ class ClaudeBotTray : Form
         y += 50;
 
         controlPanel.Height = y + 20;
-        controlPanel.ShowDialog();
-        controlPanel = null;
+
+        // Restore position if it was already visible
+        if (wasVisible)
+        {
+            controlPanel.Location = pos;
+        }
+
+        controlPanel.ResumeLayout(true);
     }
 
     private void QuitAll(object sender, EventArgs e)
