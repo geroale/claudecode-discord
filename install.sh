@@ -8,6 +8,20 @@ echo ""
 
 NEED_RESTART=false
 
+# --- 0. Xcode Command Line Tools (macOS only, needed for Swift menu bar app) ---
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  echo "[0/5] Checking Xcode Command Line Tools..."
+  if ! xcode-select -p &>/dev/null; then
+    echo "  Not found. Installing (this may take a few minutes)..."
+    xcode-select --install 2>/dev/null || true
+    echo "  ⚠ A dialog should appear. Complete the installation, then re-run this script."
+    exit 0
+  else
+    echo "  ✅ OK"
+  fi
+  echo ""
+fi
+
 # --- 1. Node.js ---
 echo "[1/5] Checking Node.js..."
 if command -v node &>/dev/null; then

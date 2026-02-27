@@ -110,7 +110,10 @@ fi
 if [ -f "$SCRIPT_DIR/menubar/ClaudeBotMenu.swift" ]; then
     if [ ! -f "$MENUBAR" ] || [ "$SCRIPT_DIR/menubar/ClaudeBotMenu.swift" -nt "$MENUBAR" ]; then
         echo "🔨 Building menu bar app..."
-        swiftc -o "$MENUBAR" "$SCRIPT_DIR/menubar/ClaudeBotMenu.swift" -framework Cocoa 2>/dev/null
+        if ! swiftc -o "$MENUBAR" "$SCRIPT_DIR/menubar/ClaudeBotMenu.swift" -framework Cocoa 2>/dev/null; then
+            echo "⚠ Menu bar app build failed. Install Xcode Command Line Tools:"
+            echo "  xcode-select --install"
+        fi
     fi
 fi
 
