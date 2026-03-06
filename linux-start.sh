@@ -11,6 +11,42 @@ ENV_FILE="$SCRIPT_DIR/.env"
 SERVICE_NAME="claude-discord"
 SERVICE_FILE="$HOME/.config/systemd/user/$SERVICE_NAME.service"
 
+# Detect distro package manager and install system packages
+# Usage: install_sys_packages appindicator tkinter
+install_sys_packages() {
+    local need_pkgs=("$@")
+    [ "${#need_pkgs[@]}" -eq 0 ] && return 0
+
+    if command -v pacman &>/dev/null; then
+        # Arch / SteamOS — map logical names to arch package names
+        local arch_pkgs=()
+        for pkg in "${need_pkgs[@]}"; do
+            case "$pkg" in
+                appindicator) arch_pkgs+=("libayatana-appindicator") ;;
+                tkinter)      arch_pkgs+=("tk") ;;
+                *)            arch_pkgs+=("$pkg") ;;
+            esac
+        done
+        # SteamOS has a read-only root by default; try to install but don't fail
+        if ! sudo pacman -S --noconfirm --needed "${arch_pkgs[@]}" 2>/dev/null; then
+            echo "⚠ Could not install ${arch_pkgs[*]} (read-only FS on SteamOS?). Tray may fall back to basic mode."
+        fi
+    elif command -v apt-get &>/dev/null; then
+        # Ubuntu / Debian — map logical names to apt package names
+        local apt_pkgs=()
+        for pkg in "${need_pkgs[@]}"; do
+            case "$pkg" in
+                appindicator) apt_pkgs+=("gir1.2-ayatanaappindicator3-0.1") ;;
+                tkinter)      apt_pkgs+=("python3-tk") ;;
+                *)            apt_pkgs+=("$pkg") ;;
+            esac
+        done
+        sudo apt install -y "${apt_pkgs[@]}" 2>/dev/null || true
+    else
+        echo "⚠ Unknown package manager, skipping system package install: ${need_pkgs[*]}"
+    fi
+}
+
 # node 경로 찾기
 find_node() {
     # nvm
@@ -178,20 +214,22 @@ if [ -n "$DISPLAY" ] || [ -n "$WAYLAND_DISPLAY" ]; then
         # pystray + Pillow 설치 확인 및 자동 설치
         if ! python3 -c "import pystray; from PIL import Image" 2>/dev/null; then
             echo "📦 Installing tray app dependencies..."
-            pip3 install pystray Pillow 2>/dev/null || pip install pystray Pillow 2>/dev/null
+            pip3 install --user pystray Pillow 2>/dev/null || \
+            pip3 install pystray Pillow 2>/dev/null || \
+            pip install --user pystray Pillow 2>/dev/null
         fi
-        # AppIndicator + tkinter 시스템 패키지 확인 (Ubuntu/Pop!_OS/Debian)
-        NEED_APT=""
+        # AppIndicator + tkinter system packages (distro-aware)
+        NEED_SYS_PKGS=()
         if ! python3 -c "import gi; gi.require_version('AyatanaAppIndicator3', '0.1')" 2>/dev/null && \
            ! python3 -c "import gi; gi.require_version('AppIndicator3', '0.1')" 2>/dev/null; then
-            NEED_APT="gir1.2-ayatanaappindicator3-0.1"
+            NEED_SYS_PKGS+=("appindicator")
         fi
         if ! python3 -c "import tkinter" 2>/dev/null; then
-            NEED_APT="$NEED_APT python3-tk"
+            NEED_SYS_PKGS+=("tkinter")
         fi
-        if [ -n "$NEED_APT" ]; then
+        if [ "${#NEED_SYS_PKGS[@]}" -gt 0 ]; then
             echo "📦 Installing system tray libraries..."
-            sudo apt install -y $NEED_APT 2>/dev/null || true
+            install_sys_packages "${NEED_SYS_PKGS[@]}"
         fi
         if python3 -c "import pystray; from PIL import Image" 2>/dev/null; then
             pkill -f "claude_tray.py" 2>/dev/null
@@ -231,8 +269,10 @@ Categories=Utility;
 StartupNotify=false
 DEOF
     chmod +x "$DESKTOP_FILE"
-    # Mark as trusted (GNOME/Ubuntu)
-    gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
+    # Mark as trusted (GNOME only; harmless no-op on KDE/SteamOS)
+    if command -v gio &>/dev/null; then
+        gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
+    fi
     echo "🖥️ Desktop shortcut created"
 fi
 
