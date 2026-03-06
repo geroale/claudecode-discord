@@ -84,8 +84,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updateStatus()
             self?.buildMenu()
         }
-        // Check for updates every 5 minutes
-        Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        // Check for updates every 5 hours
+        Timer.scheduledTimer(withTimeInterval: 18000, repeats: true) { [weak self] _ in
             self?.checkForUpdates()
         }
 

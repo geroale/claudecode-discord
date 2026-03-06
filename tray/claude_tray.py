@@ -712,9 +712,9 @@ def refresh_loop(icon):
         try:
             update_icon(icon)
             icon.menu = create_menu()
-            # Check for git updates every 5 minutes (60 * 5s intervals)
+            # Check for git updates every 5 hours (3600 * 5s intervals)
             update_check_counter += 1
-            if update_check_counter >= 60:
+            if update_check_counter >= 3600:
                 update_check_counter = 0
                 check_for_updates()
                 icon.menu = create_menu()

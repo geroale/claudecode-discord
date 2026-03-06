@@ -78,9 +78,9 @@ class ClaudeBotTray : Form
         refreshTimer.Tick += (s, e) => { try { if (UpdateStatus()) BuildMenu(); } catch { } };
         refreshTimer.Start();
 
-        // Check for updates every 5 minutes
+        // Check for updates every 5 hours
         updateCheckTimer = new System.Windows.Forms.Timer();
-        updateCheckTimer.Interval = 300000;
+        updateCheckTimer.Interval = 18000000;
         updateCheckTimer.Tick += (s, e) => { try { CheckForUpdates(); BuildMenu(); } catch { } };
         updateCheckTimer.Start();
 
