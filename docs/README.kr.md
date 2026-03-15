@@ -222,7 +222,7 @@ claudecode-discord/
 ### macOS — 메뉴바 앱
 
 <p align="center">
-  <img src="mac-tray.png" alt="macOS 컨트롤 패널" width="400">
+  <img src="mac-tray-kr.png" alt="macOS 컨트롤 패널" width="400">
 </p>
 
 ```bash
