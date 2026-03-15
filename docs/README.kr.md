@@ -248,7 +248,7 @@ GTK3 **컨트롤 패널** (트레이 아이콘 클릭), **Claude Code 사용량 
 ### Windows — 시스템 트레이 + 컨트롤 패널
 
 <p align="center">
-  <img src="windows-tray.png" alt="Windows 컨트롤 패널" width="400">
+  <img src="windows-tray-kr.png" alt="Windows 컨트롤 패널" width="400">
 </p>
 
 ```batch
