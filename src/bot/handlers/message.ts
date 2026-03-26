@@ -64,9 +64,16 @@ export async function handleMessage(message: Message): Promise<void> {
   // Ignore bots and DMs
   if (message.author.bot || !message.guild) return;
 
+  console.log(`[msg] channel=${message.channelId} user=${message.author.id} content="${message.content.substring(0, 50)}"`);
+
   // Check if channel is registered
   const project = getProject(message.channelId);
-  if (!project) return;
+  if (!project) {
+    console.log(`[msg] channel not registered`);
+    return;
+  }
+
+  console.log(`[msg] project found: ${project.project_path}`);
 
   // Auth check
   if (!isAllowedUser(message.author.id)) {

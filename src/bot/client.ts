@@ -4,6 +4,7 @@ import {
   REST,
   Routes,
   Collection,
+  ActivityType,
   type ChatInputCommandInteraction,
   type Interaction,
 } from "discord.js";
@@ -44,6 +45,10 @@ export async function startBot(): Promise<Client> {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
     ],
+    presence: {
+      status: "online",
+      activities: [{ name: "Claude Code", type: ActivityType.Playing }],
+    },
   });
 
   // Register slash commands after successful login (network guaranteed)
